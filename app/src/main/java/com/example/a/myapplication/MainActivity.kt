@@ -1,12 +1,12 @@
 package com.example.a.myapplication
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.app.PendingIntent
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
@@ -14,11 +14,19 @@ import android.preference.PreferenceManager
 import android.util.Log
 import android.view.*
 import android.net.sip.*
+import android.speech.SpeechRecognizer
+import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.ToggleButton
 
 import java.text.ParseException
+import android.speech.RecognizerIntent
+import android.speech.RecognitionListener
+import android.media.AudioManager
+
+
+
 
 class MainActivity : Activity(), View.OnTouchListener {
 
@@ -29,15 +37,40 @@ class MainActivity : Activity(), View.OnTouchListener {
     var call: SipAudioCall? = null
     var callReceiver: IncomingCallReceiver? = null
 
+    var mRecognizer: SpeechRecognizer? = null
 
-    @SuppressLint("ClickableViewAccessibility")
     public override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         val pushToTalkButton = findViewById<ToggleButton>(R.id.pushToTalk)
         pushToTalkButton.setOnTouchListener(this)
+
+        val button = findViewById<Button>(R.id.button)
+        button.setOnClickListener {
+            val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)            //음성인식 intent생성
+            i.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)    //데이터 설정
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
+            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)//음성인식 언어 설정
+            mRecognizer = SpeechRecognizer.createSpeechRecognizer(this)                //음성인식 객체
+            mRecognizer?.setRecognitionListener(listener)                                        //음성인식 리스너 등록
+            mRecognizer?.startListening(i)
+
+            //showDialog(CALL_ADDRESS)
+        }
+
+        val hangUpButton = findViewById<Button>(R.id.hang_up_button)
+        hangUpButton.setOnClickListener {
+            if (call != null) {
+                try {
+                    call!!.endCall()
+                    initializeManager()
+                } catch (se: SipException) {
+                    Log.d("error", "Error ending call.", se)
+                }
+                call!!.close()
+            }
+        }
 
         // Set up the intent filter.  This will be used to fire an
         // IncomingCallReceiver when someone calls the SIP address used by this
@@ -76,7 +109,6 @@ class MainActivity : Activity(), View.OnTouchListener {
         if (manager == null) {
             manager = SipManager.newInstance(this)
         }
-
         initializeLocalProfile()
     }
 
@@ -94,9 +126,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         }
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(baseContext)
-        val username = prefs.getString("namePref", "")
-        val domain = prefs.getString("domainPref", "")
-        val password = prefs.getString("passPref", "")
+        val username = prefs.getString("namePref", "soulmade00")
+        val domain = prefs.getString("domainPref", "sip.linphone.org")
+        val password = prefs.getString("passPref", "cshmgu1004")
 
         if (username!!.length == 0 || domain!!.length == 0 || password!!.length == 0) {
             showDialog(UPDATE_SETTINGS_DIALOG)
@@ -223,6 +255,37 @@ class MainActivity : Activity(), View.OnTouchListener {
             useName = call.peerProfile.userName
         }
         updateStatus(useName + "@" + call.peerProfile.sipDomain)
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.isSpeakerphoneOn = true
+    }
+
+    //음성인식 리스너
+    private val listener = object : RecognitionListener {
+        //입력 소리 변경 시
+        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onResults(results: Bundle) {
+            var key = ""
+            key = SpeechRecognizer.RESULTS_RECOGNITION
+            val mResult = results.getStringArrayList(key)
+            val rs = arrayOfNulls<String>(mResult.size)
+            mResult.toArray(rs)
+            updateStatus(rs[0])
+        }
+        //음성 인식 준비가 되었으면
+        override fun onReadyForSpeech(params: Bundle) {}
+        override fun onEndOfSpeech() {}
+        override fun onError(error: Int) {
+            updateStatus("에러5")
+        }
+        override fun onBeginningOfSpeech() {}                            //입력이 시작되면
+        override fun onPartialResults(partialResults: Bundle) {}       //인식 결과의 일부가 유효할 때
+        //미래의 이벤트를 추가하기 위해 미리 예약되어진 함수
+        override fun onEvent(eventType: Int, params: Bundle) {
+            updateStatus("에러2")
+        }
+        override fun onBufferReceived(buffer: ByteArray) {
+            updateStatus("에러3")
+        }                //더 많은 소리를 받을 때
     }
 
     /**
@@ -243,34 +306,9 @@ class MainActivity : Activity(), View.OnTouchListener {
         return false
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menu.add(0, CALL_ADDRESS, 0, "Call someone")
-        menu.add(0, SET_AUTH_INFO, 0, "Edit your SIP Info.")
-        menu.add(0, HANG_UP, 0, "End Current Call.")
-
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            CALL_ADDRESS -> showDialog(CALL_ADDRESS)
-            HANG_UP -> if (call != null) {
-                try {
-                    call!!.endCall()
-                } catch (se: SipException) {
-                    Log.d("error", "Error ending call.", se)
-                }
-
-                call!!.close()
-            }
-        }
-        return true
-    }
-
     override fun onCreateDialog(id: Int): Dialog? {
         when (id) {
             CALL_ADDRESS -> {
-
                 val factory = LayoutInflater.from(this)
                 val textBoxView = factory.inflate(R.layout.call_address_dialog, null)
                 return AlertDialog.Builder(this)

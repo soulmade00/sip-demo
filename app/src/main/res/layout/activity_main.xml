@@ -2,32 +2,50 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
-    <RelativeLayout android:padding="12dp"
+
+    <RelativeLayout
         android:id="@+id/mainlayout"
-        android:orientation="vertical"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent">
+        android:layout_height="fill_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
 
         <TextView
             android:id="@+id/sipLabel"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
             android:layout_centerHorizontal="true"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            />
+            android:textAppearance="?android:attr/textAppearanceLarge" />
 
         <ToggleButton
-            android:layout_height="400dp"
-            android:layout_width="400dp"
-            android:text="@+string/talk"
             android:id="@+id/pushToTalk"
-
+            android:layout_width="400dp"
+            android:layout_height="400dp"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
+            android:layout_marginTop="-20dp"
             android:background="@drawable/btn_record"
+            android:text="@+string/talk"
             android:textOff=""
-            android:textOn=""
-            android:layout_marginTop="-20dp" />
+            android:textOn="" />
+
+        <Button
+            android:id="@+id/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="83dp"
+            android:text="Call some" />
+
+        <Button
+            android:id="@+id/hang_up_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="36dp"
+            android:text="hang_up" />
 
     </RelativeLayout>
 </FrameLayout>
